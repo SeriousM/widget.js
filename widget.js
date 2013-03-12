@@ -2,227 +2,269 @@
 widgets = {};
 
 var widget = (function () {
-	return {
-		create: function (container, options, producerFunction) {
-			/// <summary>
-			/// Create a new widget by providing...
-			/// 1. A container that will receive the html that is produced by this widget
-			/// 2. Options
-			/// 3. A producedFunction that will actually create the html of this widget.
-			/// <param name="container">A DOM element, where the html (produced by the producerFunction) will be inserted into.</param>
-			/// <param name="options">
-			/// A JSON object with options
-			///   'name' ... A unique identfier for this widget. This name is used to identify the widget's content in the done callback of the combine() method.
-			///   'method' ... Specifies if the content that is emitted by the producerFunction is to be appended or replaced into the dom element.
-			/// </param>
-			/// </summary>
-			var doneFunctionStack = [],
-			    combineDoneFunctionStack = [],
-				renderDoneDeferred = $.Deferred();
 
-			return {
-				options: options || {},
-				
-				container: container,
-				
-				name: options.name || 'noname',
-				
-				render: function () {
-					/// <summary>
-					/// Execute the producer function that creates the html for this widget.
-					/// After the producer function has finished its work (be it synchronous or asynchronous), it will pass its result to the done() callback
-					/// as well as insert/append it into the dom element.
-					/// </summary>
-					var that = {},
-						self = this,
-						selfArgs = Array.prototype.slice.call(arguments, 0);
+  var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun, defaults, widgetThat,
+    // constants
+      TIMEOUT = 3000,
+      ERROR_CONTENT = "An error occured",
+      TIMEOUT_CONTENT = "Timeout",
+    WIDGET_NAME = "noname",
+    CONTAINER_ELEMENT = '<div>';
 
-					// Execute the producer function
-					// Note: The producer function may produce its html synchronously or asynchronously!
-					if (typeof producerFunction === 'function') {
-						try {
-							// TODO: should we pass 'self' (the widget instance) here or 
-							// is it better to pass another object that only provides 'emit()' and nothing else.
-							producerFunction.apply(self, selfArgs);
-						}
-						catch (e) {
-							// In case the producer function caused an error, we stil emit a result 'ERROR' instead
-							// of the correct result.
-							console.error("Render function of renderer [" + self.name + "] returned an error", e);
-							self.emit("ERROR");
-						}
-					} else {
-						throw new Error("producerFunction is not a function!");
-					}
-					
-					that.done = function (callback) {
-						/// <summary>
-						/// Add a callback that will be executed once the producer function finished its work and emitted its html result.
-						/// </summary>
+  defaults = {
+    TIMEOUT: TIMEOUT,
+    ERROR_CONTENT: ERROR_CONTENT,
+    TIMEOUT_CONTENT: TIMEOUT_CONTENT,
+    WIDGET_NAME: WIDGET_NAME,
+    CONTAINER_ELEMENT: CONTAINER_ELEMENT
+  };
 
-						// Push the callback to the done stack
-						if (typeof callback === 'function') {
-							doneFunctionStack.push(callback);
-						} else {
-							throw new Error("callback is not a function!");
-						}
-						
-						// Add a dererred 'then' that will execute all done callbacks on the stack
-						// once the emit is called (and the deferrer is resolved).
-						renderDoneDeferred.then(function () {
-							var doneFn, 
-								thenArgs = Array.prototype.slice.call(arguments);
-							
-							if (doneFunctionStack.length > 0) {
-								while (doneFn = doneFunctionStack.pop()) {
-									doneFn.apply(self, thenArgs);
-								}
-							}
-						});
-						
-						return this;
-					};
-					
-					return that;
-				},
-				
-				emit: function (result) {
-					/// <summary>
-					/// A widget's producer function needs to call emit() in order to return its result. 
-					/// The emit function must be called whenever the result is ready, that means in case of a producer 
-					/// function that works asynchronously, the emit() must be called in the last ajax callback.
-					/// <param name="result">The result html produced by the producer function.</param>
-					/// </summary>
-					var resultHtml = "", i, keys, combinedResult = "", origResult = result;
+  // private
+  appendElementsFun = function (targetContainer, result) {
+    var keys = Object.keys(result);
+    for (var i = 0; i < keys.length; i += 1) {
+      var childElement = $(result[keys[i]]);
+      try {
+        targetContainer.append(childElement);
+      } catch (e) {
+        if (e && e.name && e.name == "HierarchyRequestError") {
+          console.error("This element is already bound to an DOM element. Please fix this binding.", childElement);
+        }
+        throw e;
+      }
+    }
+  };
 
-					// In case the result is an object, it means that it came from the combine() method.
-					// In that case, we transform the result to a nice json.
-					if (typeof result === 'object') {
-						keys = Object.keys(result);
-						for (i = 0; i < keys.length; i += 1) {
-							combinedResult += $(result[keys[i]]).wrap("<div>").parent().html();
-						}
-						result = combinedResult;
-					}
+  // public
+  createFun = function (container, options, producerFunction) {
+    /// <summary>
+    /// Creates a new widget.
+    /// </summary>
+    /// <param name="container">
+    /// A DOM element, where the html (produced by the producerFunction) will be inserted into.
+    /// If omitted a container is still created and can be accessed by calling widget.container.
+    /// </param>
+    /// <param name="options">
+    /// A JSON object with options
+    ///   'name' ... A unique identfier for this widget. This name is used to identify the widget's content in the done callback of the combine() method.
+    ///   'onDataChange' ... a callback on data(obj) was called
+    /// </param>
+    /// <param name="producerFunction">
+    /// A producedFunction that will actually create the html of this widget.
+    /// </param>
+    var renderDoneDeferred = $.Deferred(),
+        data = null,
+        isRendered = false,
+        widgetTimeout = null;
 
-					// use replace method by default
-					if ( !this.options || !this.options.method || (this.options.method && this.options.method === 'replace')) {
-						resultHtml = $(container).html(result).wrap("<div>").parent().html();
-					} else if (this.options.method && this.options.method === 'append') {
-						resultHtml = $(container).append(result).wrap("<div>").parent().html();
-					}
+    // make the container optional
+    if (!(container instanceof jQuery)) {
+      producerFunction = options;
+      options = container;
+      container = $(defaults.CONTAINER_ELEMENT);
+    }
 
-					// Resolve the derrer for the done callbacks.
-					// Once this deferrer is resolved, all done callbacks from the stack will be executed.
-					renderDoneDeferred.resolve(resultHtml, origResult);
-				},
+    options = $.extend({ name: defaults.WIDGET_NAME, timeout: defaults.TIMEOUT }, options);
 
-				combine: function (widgets) {
-					/// <summary>
-					/// Combine multiple widgets (that is, their outputs) into one widget (output).
-					/// <param name="widgets">All widgets as an array.</param>
-					/// </summary>
-					var self = this,
-					    widgetResults = [], i, widget,
-					    hasError = false,
-						that = {},
-						combinedResult = {},
-						combinedDeferrer = $.Deferred();
+    var localContainer = container, localOptions = options, name = localOptions.name,
+        failFun, completeFun, renderFun, dataFun, setOptionsFun,
+        publicThat, renderThat, dataThat, renderDoneThat,
+        customData = {};
 
-					if (!widgets || widgets.length === 0) {
-						return false;
-					}
-					
-					// Error handling for 'no emit call'
-					// If one of the widgets does not call emit() in time, it will be called here
-					// This fallback will emit 'too late'.
-					var timeout = setTimeout(function () {
-						var j, k, widgetName, found;
-						hasError = true;
+    // method definition
+    failFun = function (message) {
+      localContainer.html(message);
+      completeFun();
+    };
 
-						console.error("One or multiple renderers did not emit in time.");
+    completeFun = function () {
+      clearTimeout(widgetTimeout);
+      renderDoneDeferred.resolve(renderDoneThat);
+    };
 
-						for (j = 0; j < widgets.length; j += 1) {
-							widgetName = widgets[j].name, found = false;
-							for (k = 0; k < widgetResults.length; k += 1) {
-								if (widgetResults[k].key === widgetName) {
-									found = true;
-									break;
-								}
-							}
-							if (!found) {
-								widgets[j].emit("Too late!"); // TODO [M]: externalize string
-							}
-						}
+    renderFun = function () {
+      /// <summary>
+      /// Execute the producer function that creates the html for this widget.
+      /// </summary>
+      var selfArgs = Array.prototype.slice.call(arguments, 0);
 
-						for (j = 0; j < widgetResults.length; j += 1) {
-							combinedResult[widgetResults[j].key] = widgetResults[j].html;
-						}
-						self.emit(combinedResult);
-					}, 3000); // TODO [M]: create option
-					
-					// Execute all widget's render() methods.
-					for (i = 0; i < widgets.length; i += 1) {
-						if (typeof widgets[i] === 'object') {
-							widget = widgets[i];
+      // fail with an error if the widget is too slow to respond in time.
+      widgetTimeout = setTimeout(function () {
+        failFun(defaults.TIMEOUT_CONTENT);
+      }, localOptions.timeout);
 
-							widget.render().done(function (html) {
-								var result = {},
-									j;
+      // Execute the producer function
+      // Note: The producer function may produce its html synchronously or asynchronously!
+      if (typeof producerFunction === 'function') {
+        try {
+          producerFunction.apply(renderThat, selfArgs);
 
-								result.key = this.name;
-								result.html = html;
+          // indicate that rendered was called
+          isRendered = true;
+        } catch (e) {
+          // In case the producer function caused an error, we stil emit a result 'ERROR' instead
+          // of the correct result.
+          console.error("Error on render: " + (e.message || "no message found"), e);
+          failFun(defaults.ERROR_CONTENT);
+        }
+      } else {
+        throw new Error("producerFunction is not a function!");
+      }
 
-								widgetResults.push(result);
+      var promise = renderDoneDeferred.promise();
 
-								// All renderers returned their result?
-								if (widgetResults.length === widgets.length && !hasError) {
-									clearTimeout(timeout);
+      return promise;
+    };
 
-									// Transform the array of results into one object
-									for (j = 0; j < widgetResults.length; j += 1) {
-										combinedResult[widgetResults[j].key] = widgetResults[j].html;
-									}
-									
-									// Resolve the combinedDeferrer in order to execute
-									// All done callbacks for the combine() of the stack.
-									combinedDeferrer.resolve(combinedResult);
-								}
-							});
-						}
-					}
+    dataFun = function () {
+      /// <summary>
+      /// function 1: get data by calling #data()
+      /// function 2: set data by calling #data(object)
+      /// while setting the data, the callback onDataChange from the options will be invoked.
+      /// </summary>
+      // if there was no argument return the current data
+      if (arguments.length === 0) {
+        return data;
+      }
 
-					that.done = function (callback) {
-						/// <summary>
-						/// Add a callback that will receive the result of the combination.
-						/// </summary>
-						
-						// Push the callback on the stack
-						if (typeof callback === 'function') {
-							combineDoneFunctionStack.push(callback);
-						} else {
-							throw new Error("callbacks is not a function!");
-						}
+      var obj = arguments[0];
 
-						// Create a combinedDeferrer. This deferrer's then callback will
-						// execute all done callbacks of the stack.
-						combinedDeferrer.then(function () {
-							var f,
-								thenArgs = Array.prototype.slice.call(arguments);
+      // asseble a event object
+      var dataChangeObject = {
+        oldData: data,
+        newData: obj,
+        isRendered: isRendered
+      };
 
-							if (combineDoneFunctionStack.length > 0) {
-								while (f = combineDoneFunctionStack.pop()) {
-									f.apply(self, thenArgs);
-								}
-							}
-						});
+      // set the data
+      data = obj;
 
-						return this;
-					};
-					
-					return that;
-				}
-			};
-		}
-	};
-} ());
+      if (localOptions.onDataChange && typeof (localOptions.onDataChange) === "function") {
+        localOptions.onDataChange.apply(dataThat, [dataChangeObject]);
+      }
+
+      // return this to enable chainging
+      return this;
+    };
+
+    setOptionsFun = function (newOptions) {
+      /// <summary>
+      /// extens the existing options with the new provided options.
+      /// </summary>
+      localOptions = $.extend(localOptions, newOptions);
+    };
+
+    renderDoneThat = {
+      container: localContainer,
+      name: name,
+      data: dataFun,
+      customData: customData,
+      setOptions: setOptionsFun
+    };
+
+    publicThat = {
+      render: renderFun,
+      container: localContainer,
+      name: name,
+      data: dataFun,
+      customData: customData,
+      setOptions: setOptionsFun
+    };
+
+    dataThat = {
+      container: localContainer,
+      name: name,
+      data: dataFun,
+      customData: customData
+    };
+
+    renderThat = {
+      container: localContainer,
+      name: name,
+      data: dataFun,
+      fail: failFun,
+      complete: completeFun,
+      options: localOptions,
+      customData: customData,
+      widget: publicThat
+    };
+
+    return publicThat;
+  };
+
+  combineFun = function (widgets) {
+    var widgetDeferreds = [],
+        combinedResult = {},
+        combinePromise,
+        ownDeferred = $.Deferred();
+
+    if (!widgets || widgets.length === 0) {
+      return false;
+    }
+
+    var getProcessWidgetPromise = function (widget) {
+      widget.setOptions({ timeout: 2900 });
+      var promise = widget.render();
+
+      // render the widget and resolve as successful
+      promise.done(function () {
+        combinedResult[widget.name] = widget.container;
+      });
+
+      return promise;
+    };
+
+    $.each(widgets, function (index, widget) {
+      var localWidget = widget;
+      widgetDeferreds.push(getProcessWidgetPromise(localWidget));
+    });
+
+    combinePromise = $.when.apply(this, widgetDeferreds);
+    combinePromise.done(function () {
+      ownDeferred.resolve(combinedResult);
+    });
+
+    return ownDeferred.promise();
+  };
+
+  appendToFun = function (targetContainer, widgets) {
+    var combinePromise = this.combine(widgets);
+
+    combinePromise.done(function (result) {
+      appendElementsFun(targetContainer, result);
+    });
+
+    return combinePromise;
+  };
+
+  replaceInFun = function (targetContainer, widgets) {
+    var combinePromise = this.combine(widgets);
+
+    combinePromise.done(function () {
+      targetContainer.html('');
+    });
+    combinePromise.done(function (result) {
+      appendElementsFun(targetContainer, result);
+    });
+
+    return combinePromise;
+  };
+
+  widgetThat = {
+    defaults: defaults,
+
+    create: createFun,
+
+    combine: combineFun,
+
+    appendTo: appendToFun,
+
+    replaceIn: replaceInFun
+  };
+
+  return widgetThat;
+}());
+
+(function($) {
+  $.widget = widget;
+}(jQuery));
