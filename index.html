@@ -1,49 +1,63 @@
-<!DOCTYPE html>
 <html>
+<head>
+	<title>Jasmine Spec Runner</title>
+	<link type="text/css" rel="stylesheet" href="jasmine.css">
+		<script type="text/javascript" src="jquery-1.7.1.min.js"></script>
+		<!-- include jasmine library -->
+		<script type="text/javascript" src="jasmine.js"></script>
+		<script type="text/javascript" src="reporters/jasmine-html.js"></script>
+		<script type="text/javascript" src="reporters/jasmine-junit.js"></script>
+		<!-- include spec files here... -->
+		<script type="text/javascript" src="https://raw.github.com/SeriousM/widget.js/master/test/test-utils.js"></script>
+		<script type="text/javascript" src="https://raw.github.com/SeriousM/widget.js/master/test/widget.jasmine.js"></script>
+		<script type="text/javascript" src="https://raw.github.com/SeriousM/widget.js/master/widget.js"></script>
+	</link>
+</head>
+<body>
+	<textarea id="logger" style="display: none;"></textarea>
+	<script type="text/javascript">
+		(function () {
+			console.log(jasmine.getEnv());
 
-  <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Widget : A javascript widget " />
+			var jasmineEnv = jasmine.getEnv();
+			jasmineEnv.updateInterval = 1000;
 
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+			var htmlReporter = new jasmine.HtmlReporter();
+			var junitReporter = new jasmine.JUnitXmlReporter();
 
-    <title>Widget Page</title>
-  </head>
+			junitReporter.writeFile = function (filename, text) {
+				$('#logger').text($('#logger').text() + '\r\n' + text);
+			};
 
-  <body>
+			jasmineEnv.addReporter(htmlReporter);
+			jasmineEnv.addReporter(junitReporter);
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/linudaar/widget">View on GitHub</a>
+			jasmineEnv.specFilter = function (spec) {
+				return htmlReporter.specFilter(spec);
+			};
 
-          <h1 id="project_title">Widget</h1>
-          <h2 id="project_tagline">A composable widget written in javascript </h2>
+			var currentWindowOnload = window.onload;
 
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/linudaar/widget/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/linudaar/widget/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
+			window.onload = function () {
+				if (currentWindowOnload) {
+					currentWindowOnload();
+				}
+				execJasmine();
+			};
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <p>Hello World!</p>
-      </section>
-    </div>
+			function execJasmine() {
+				var oldCallback = jasmineEnv.currentRunner().finishCallback;
+				jasmineEnv.currentRunner().finishCallback = function () {
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Widget maintained by <a href="https://github.com/linudaar">linudaar</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
+					oldCallback.apply(this, arguments);
 
-    
+					console.log("jasmine oncomplete called");
+					$('body').append($("<div  />", { tid: 'jasmineDoneIndicator' }));
+				};
 
-  </body>
+				jasmineEnv.execute();
+			}
+		})();
+	</script>
+</body>
 </html>
