@@ -221,8 +221,6 @@ var widget = (function () {
       complete: completeFun,
       options: localOptions,
       customData: customData,
-      //data: data,
-      //setData: setDataFun,
       data: safeDataFun
     };
 
