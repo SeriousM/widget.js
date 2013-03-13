@@ -13,13 +13,13 @@
 
       w = widget.create($container, options, function () {
         // do whatever necessary to produce the desired output html...
-        this.container.html("--- HTML RESULT ---");
+        this.container().html("--- HTML RESULT ---");
         this.complete();
       });
 
       w.render().done(function () {
         resultHtml = $("<div id='foo'>" + htmlDummy + "</div>").outerHTML();
-        renderResult = w.container.outerHTML();
+        renderResult = w.container().outerHTML();
         testFinished = true;
       });
 
@@ -42,13 +42,13 @@
       w = widget.create($container, null, function () {
         var self = this;
         setTimeout(function () {
-          self.container.html(htmlDummy);
+          self.container().html(htmlDummy);
           self.complete();
         }, 100);
       });
 
       w.render().done(function () {
-        result = w.container.outerHTML();
+        result = w.container().outerHTML();
         testFinished = true;
       });
 
@@ -75,19 +75,19 @@
             self = this;
 
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
-          this.container.html(htmlDummyOne);
+          this.container().html(htmlDummyOne);
           this.complete();
         });
 
         widget.combine([widgetOne]).done(function (combinedResult) {
-          self.container.append(combinedResult.one);
+          self.container().append(combinedResult.one);
           self.complete();
         });
       });
 
       combinedWidget.render().done(function () {
 
-        combinedWidgetHtml = combinedWidget.container.outerHTML();
+        combinedWidgetHtml = combinedWidget.container().outerHTML();
 
         var htmlDummyOneDiv = $("<div id='one'>" + htmlDummyOne + "</div>").outerHTML(),
             html = htmlDummyOneDiv;
@@ -123,25 +123,25 @@
             self = this;
 
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
-          this.container.html(htmlDummyOne);
+          this.container().html(htmlDummyOne);
           this.complete();
         });
 
         widgetTwo = widget.create($("<div id='two'>"), { name: 'two' }, function () {
-          this.container.html(htmlDummyTwo);
+          this.container().html(htmlDummyTwo);
           this.complete();
         });
 
         widget.combine([widgetOne, widgetTwo]).done(function (combinedResult) {
-          self.container.append(combinedResult.one);
-          self.container.append(combinedResult.two);
+          self.container().append(combinedResult.one);
+          self.container().append(combinedResult.two);
           self.complete();
         });
       });
 
       combinedWidget.render().done(function () {
 
-        combinedWidgetHtml = combinedWidget.container.outerHTML();
+        combinedWidgetHtml = combinedWidget.container().outerHTML();
 
         var htmlDummyOneDiv = $("<div id='one'>" + htmlDummyOne + "</div>").outerHTML(),
             htmlDummyTwoDiv = $("<div id='two'>" + htmlDummyTwo + "</div>").outerHTML(),
@@ -177,18 +177,18 @@
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
           var w1 = this;
           setTimeout(function () {
-            w1.container.html(htmlDummyOne);
+            w1.container().html(htmlDummyOne);
             w1.complete();
           }, 100);
         });
 
-        widget.appendTo(self.container, [widgetOne]).done(self.complete);
+        widget.appendTo(self.container(), [widgetOne]).done(self.complete);
       };
 
       combinedWidget = widget.create($combinedContainer, { name: 'combined' }, combinedRenderFunction);
 
       combinedWidget.render().done(function () {
-        combinedResult = combinedWidget.container.outerHTML();
+        combinedResult = combinedWidget.container().outerHTML();
         testFinished = true;
       });
 
@@ -223,7 +223,7 @@
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
           var w1 = this;
           setTimeout(function () {
-            w1.container.html(htmlDummyOne);
+            w1.container().html(htmlDummyOne);
             w1.complete();
           }, 100);
         });
@@ -232,17 +232,17 @@
         widgetTwo = widget.create($("<div id='two'>"), { name: 'two' }, function () {
           var w2 = this;
           setTimeout(function () {
-            w2.container.html(htmlDummyTwo);
+            w2.container().html(htmlDummyTwo);
             w2.complete();
           }, 150);
 
         });
 
-        widget.appendTo(self.container, [widgetOne, widgetTwo]).done(self.complete);
+        widget.appendTo(self.container(), [widgetOne, widgetTwo]).done(self.complete);
       });
 
       combinedWidget.render().done(function () {
-        combinedResult = combinedWidget.container.outerHTML();
+        combinedResult = combinedWidget.container().outerHTML();
         testFinished = true;
       });
 
@@ -269,12 +269,12 @@
           htmlDummyTwo = "R2 HTML";
 
       var w1 = widget.create({ name: 'r1' }, function () {
-        this.container.html(htmlDummyOne);
+        this.container().html(htmlDummyOne);
         this.complete();
       });
 
       var w2 = widget.create({ name: 'r2' }, function () {
-        this.container.html(htmlDummyTwo);
+        this.container().html(htmlDummyTwo);
         this.complete();
       });
 
@@ -290,7 +290,7 @@
           doneCalls = 0;
 
       var w = widget.create($container, { name: 'r1' }, function () {
-        this.container.html(htmlDummyOne);
+        this.container().html(htmlDummyOne);
 
         // NO COMPLETE HERE
         // this.complete();
@@ -300,11 +300,11 @@
         doneCalls += 1;
       });
 
-      waitsFor(function() {
+      waitsFor(function () {
         return doneCalls == 1;
       });
 
-      runs(function() {
+      runs(function () {
         expect($container.html()).toBe(widget.defaults.TIMEOUT_CONTENT);
       });
     });
@@ -316,7 +316,7 @@
           doneCalls = 0;
 
       var w = widget.create($container, { name: 'r1' }, function () {
-        this.container.html(htmlDummyOne);
+        this.container().html(htmlDummyOne);
         this.complete();
       });
 
@@ -326,11 +326,11 @@
         doneCalls += 1;
       });
 
-      waitsFor(function() {
+      waitsFor(function () {
         return doneCalls == 2;
       });
 
-      runs(function() {
+      runs(function () {
         expect($container.html()).toBe(htmlDummyOne);
         expect(doneCalls).toBe(2);
       });
@@ -341,7 +341,7 @@
       var $container = $("<div id='container'>");
 
       var w = widget.create($container, { name: 'r1' }, function () {
-        throw Error("something happend");
+        throw Error("error for unit test");
       });
 
       w.render();
@@ -362,11 +362,11 @@
           // does not emit!
         });
 
-        widget.appendTo(self.container, [widgetOne]).done(self.complete);
+        widget.appendTo(self.container(), [widgetOne]).done(self.complete);
       });
 
       combinedWidget.render().done(function () {
-        combinedResult = combinedWidget.container.outerHTML();
+        combinedResult = combinedWidget.container().outerHTML();
         testFinished = true;
       });
 
@@ -397,7 +397,7 @@
           self = this;
 
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
-          this.container.html(htmlDummyOne);
+          this.container().html(htmlDummyOne);
           this.complete();
         });
 
@@ -406,11 +406,11 @@
           // does not emit!
         });
 
-        widget.appendTo(self.container, [widgetOne, widgetTwo]).done(self.complete);
+        widget.appendTo(self.container(), [widgetOne, widgetTwo]).done(self.complete);
       });
 
       combinedWidget.render().done(function () {
-        combinedResult = combinedWidget.container.outerHTML();
+        combinedResult = combinedWidget.container().outerHTML();
         testFinished = true;
       });
 
@@ -443,35 +443,35 @@
           var combinedRendererOneScope = this;
 
           var w11 = widget.create($("<div id='combined-1-sub-1'>"), { name: 'c1-1' }, function () {
-            this.container.html("c1-1");
+            this.container().html("c1-1");
             this.complete();
           });
 
           var w12 = widget.create($("<div id='combined-1-sub-2'>"), { name: 'c1-2' }, function () {
-            this.container.html("c1-2");
+            this.container().html("c1-2");
             this.complete();
           });
 
-          widget.appendTo(combinedRendererOneScope.container, [w11, w12]).done(combinedRendererOneScope.complete);
+          widget.appendTo(combinedRendererOneScope.container(), [w11, w12]).done(combinedRendererOneScope.complete);
         });
 
         var combinedRendererTwo = widget.create($containerCombinedTwo, { name: 'c2' }, function () {
           var combinedRendererTwoScope = this;
 
           var w21 = widget.create($("<div id='combined-2-sub-1'>"), { name: 'c2-1' }, function () {
-            this.container.html("c2-1");
+            this.container().html("c2-1");
             this.complete();
           });
 
           var w22 = widget.create($("<div id='combined-2-sub-2'>"), { name: 'c2-2' }, function () {
-            this.container.html("c2-2");
+            this.container().html("c2-2");
             this.complete();
           });
 
-          widget.appendTo(combinedRendererTwoScope.container, [w21, w22]).done(combinedRendererTwoScope.complete);
+          widget.appendTo(combinedRendererTwoScope.container(), [w21, w22]).done(combinedRendererTwoScope.complete);
         });
 
-        widget.appendTo(combinedRendererSuperScope.container, [combinedRendererOne, combinedRendererTwo]).done(combinedRendererSuperScope.complete);
+        widget.appendTo(combinedRendererSuperScope.container(), [combinedRendererOne, combinedRendererTwo]).done(combinedRendererSuperScope.complete);
       });
 
       combinedRendererSuper.render().done(function () {
@@ -480,7 +480,7 @@
             w21Html = $("<div id='combined-2-sub-1'>c2-1</div>").outerHTML(),
             w22Html = $("<div id='combined-2-sub-2'>c2-2</div>").outerHTML();
 
-        doneResult = combinedRendererSuper.container.outerHTML();
+        doneResult = combinedRendererSuper.container().outerHTML();
         c1Html = $("<div id='combined-1'>" + w11Html + w12Html + "</div>").outerHTML();
         c2Html = $("<div id='combined-2'>" + w21Html + w22Html + "</div>").outerHTML();
         superHtml = $("<div id='combined-super'>" + c1Html + c2Html + "</div>").outerHTML();
@@ -512,25 +512,25 @@
             self = this;
 
         widgetOne = widget.create($("<div id='one'>"), { name: 'one' }, function () {
-          this.container.html(htmlDummyOne);
+          this.container().html(htmlDummyOne);
           this.complete();
         });
 
         widgetTwo = widget.create($("<div id='two'>"), { name: 'two' }, function () {
-          this.container.html(htmlDummyTwo);
+          this.container().html(htmlDummyTwo);
           this.complete();
         });
 
         widget.combine([widgetOne, widgetTwo]).done(function (combinedResult) {
           expect($combinedContainer.html()).toBe("");
 
-          self.container.html("<div id='x'>xxx" + combinedResult.one.outerHTML() + "xxx</div><div id='y'>yyy" + combinedResult.two.outerHTML() + "yyy</div>");
+          self.container().html("<div id='x'>xxx" + combinedResult.one.outerHTML() + "xxx</div><div id='y'>yyy" + combinedResult.two.outerHTML() + "yyy</div>");
           self.complete();
         });
       });
 
       combinedWidget.render().done(function () {
-        widgetHtml = combinedWidget.container.outerHTML();
+        widgetHtml = combinedWidget.container().outerHTML();
 
         var htmlDummyOneDiv = $("<div id='one'>" + htmlDummyOne + "</div>").outerHTML(),
             htmlDummyTwoDiv = $("<div id='two'>" + htmlDummyTwo + "</div>").outerHTML(),
@@ -564,7 +564,7 @@
       w = widget.create($container, options, function () {
 
         var $child = $("<div id='child'>").html("content");
-        this.container.append($child);
+        this.container().append($child);
 
         this.complete();
       });
@@ -579,7 +579,7 @@
 
       var widgetDataChange = function (eventData) {
         if (eventData.isRendered) {
-          this.customData.child.text(eventData.newData.sentenceValue);
+          this.customData().child.text(eventData.newData.sentenceValue);
         }
       };
 
@@ -588,8 +588,8 @@
 
       w = widget.create($container, options, function () {
 
-        this.customData.child = $("<p id='child'>").text(this.data().sentenceValue);
-        this.container.append(this.customData.child);
+        this.customData().child = $("<p id='child'>").text(this.data().sentenceValue);
+        this.container().append(this.customData().child);
         this.complete();
       });
 
@@ -607,18 +607,18 @@
       var outerOptions, outerWidget;
 
       var outerWidgetDataChange = function (eventData) {
-        this.customData.sliderValues = eventData.newData;
+        this.customData().sliderValues = eventData.newData;
 
         if (eventData.isRendered) {
-          this.customData.sliderNewIdea.data(eventData.newData.newIdeaValue);
-          this.customData.sliderNewComment.data(eventData.newData.newCommentValue);
+          this.customData().sliderNewIdea.data(eventData.newData.newIdeaValue);
+          this.customData().sliderNewComment.data(eventData.newData.newCommentValue);
         }
       };
 
-      var getDataFunction = function() {
+      var getDataFunction = function () {
         return {
-          newIdeaValue: this.customData.sliderNewIdea.data(),
-          newCommentValue: this.customData.sliderNewComment.data()
+          newIdeaValue: this.customData().sliderNewIdea.data(),
+          newCommentValue: this.customData().sliderNewComment.data()
         };
       };
 
@@ -628,28 +628,28 @@
 
         var getSliderWidget = function (name) {
           var sliderDataChange = function (eventData) {
-            this.customData.sliderValue = eventData.newData;
+            this.customData().sliderValue = eventData.newData;
 
             if (eventData.isRendered) {
-              this.customData.sliderObject.slider('value', this.customData.sliderValue);
+              this.customData().sliderObject.slider('value', this.customData().sliderValue);
             }
           };
 
-          var sliderGetData = function() {
-            return this.customData.sliderValue;
+          var sliderGetData = function () {
+            return this.customData().sliderValue;
           };
 
           var sliderOptions = { name: name, onDataChange: sliderDataChange, getData: sliderGetData };
 
           var sliderWidget = widget.create(sliderOptions, function () {
-            this.customData.sliderObject = this.container;
-            this.customData.sliderObject.slider({
+            this.customData().sliderObject = this.container();
+            this.customData().sliderObject.slider({
               range: "max",
               min: 0,
               max: 3,
-              value: this.customData.sliderValue,
+              value: this.customData().sliderValue,
               slide: function (event, ui) {
-                this.customData.sliderValue = ui.value;
+                this.customData().sliderValue = ui.value;
               }
             });
 
@@ -659,13 +659,13 @@
           return sliderWidget;
         };
 
-        this.customData.sliderNewIdea = getSliderWidget('sliderNewIdea');
-        this.customData.sliderNewComment = getSliderWidget('sliderNewComment');
+        this.customData().sliderNewIdea = getSliderWidget('sliderNewIdea');
+        this.customData().sliderNewComment = getSliderWidget('sliderNewComment');
 
-        this.customData.sliderNewIdea.data(this.customData.sliderValues.newIdeaValue);
-        this.customData.sliderNewComment.data(this.customData.sliderValues.newCommentValue);
+        this.customData().sliderNewIdea.data(this.customData().sliderValues.newIdeaValue);
+        this.customData().sliderNewComment.data(this.customData().sliderValues.newCommentValue);
 
-        widget.appendTo(this.container, [this.customData.sliderNewIdea, this.customData.sliderNewComment]).done(this.complete);
+        widget.appendTo(this.container(), [this.customData().sliderNewIdea, this.customData().sliderNewComment]).done(this.complete);
       });
 
       outerWidget.data({ newIdeaValue: 1, newCommentValue: 3 });
@@ -685,7 +685,7 @@
       widget.create(targetContainer, null, function () {
         this.complete();
       }).render().done(function (w) {
-        w.container.css("color", "red");
+        w.container().css("color", "red");
       });
 
       expect(targetContainer.css("color")).toBe("red");
@@ -718,7 +718,7 @@
 
       outData = w.data();
 
-      expect(outData).toMatch(inData);
+      expect(outData).toBe(inData);
       expect(outData.some).toBe(inData.some);
     });
 
@@ -749,7 +749,7 @@
         $container = $("<div id='foo'>");
 
       w = widget.create($container, { name: "foo" }, function () {
-        this.container.html(this.data().some);
+        this.container().html(this.data().some);
         this.complete();
       });
 
@@ -770,7 +770,7 @@
         $container = $("<div id='foo'>");
 
       w = widget.create($container, { name: "foo" }, function () {
-        this.container.html(this.data().some);
+        this.container().html(this.data().some);
         this.complete();
       });
 
@@ -784,7 +784,7 @@
 
       outData = w.data();
 
-      expect(outData).toMatch(inData);
+      expect(outData).toBe(inData);
       expect(outData.some).toBe("!two?");
     });
 
@@ -822,13 +822,13 @@
       var onDataChange = function (eventData) {
         if (callbackCalledCount == 0) {
           expect(eventData.isRendered).toBe(false);
-          expect(eventData.oldData).toMatch({});
+          expect(eventData.oldData).toBeNull();
           expect(eventData.newData).toBe(inData1);
         }
         else if (callbackCalledCount == 1) {
           expect(eventData.isRendered).toBe(false);
           expect(eventData.oldData).not.toBe(eventData.newData);
-          expect(eventData.oldData).toMatch(inData1);
+          expect(eventData.oldData).toBe(inData1);
           expect(eventData.newData).toBe(inData2);
         }
 
@@ -860,7 +860,7 @@
 
       var onDataChange = function (eventData) {
         if (eventData.isRendered) {
-          $(this.container).find("#bar").html("---" + eventData.newData.number + "---");
+          this.container().find("#bar").html("---" + eventData.newData.number + "---");
         } else {
           // ignore it
         }
@@ -872,7 +872,7 @@
         var txt = "---" + this.data().number + "---";
         var child = $('<div><div id="bar">' + txt + '</div></div>');
 
-        this.container.append(child);
+        this.container().append(child);
         this.complete();
       });
 
@@ -893,14 +893,14 @@
     });
   });
 
-  describe("documentation", function() {
-    it("minimal widget setting with null container", function() {
+  describe("documentation", function () {
+    it("minimal widget setting with null container", function () {
       var w = widget.create($('<div>'), null, function () {
         this.complete();
       });
 
       w.render();
-      expect(w.container.outerHTML()).toBe('<div></div>');
+      expect(w.container().outerHTML()).toBe('<div></div>');
     });
 
     it("minimal widget setting without container", function () {
@@ -909,19 +909,19 @@
       });
 
       w.render();
-      expect(w.container.outerHTML()).toBe('<div></div>');
+      expect(w.container().outerHTML()).toBe('<div></div>');
     });
-    
+
     it("widget create child in container", function () {
       var w = widget.create(null, function () {
-        this.container.append($('<p>').attr('id', 'p_ele').text("hello world"));
+        this.container().append($('<p>').attr('id', 'p_ele').text("hello world"));
         this.complete();
       });
 
       w.render();
-      expect(w.container.find('#p_ele').text()).toBe('hello world');
+      expect(w.container().find('#p_ele').text()).toBe('hello world');
     });
-    
+
     it("widget contains set of written data", function () {
       var w = widget.create(null, function () {
         this.complete();
@@ -931,21 +931,20 @@
       w.render();
       expect(w.data().name).toBe('banana');
     });
-    
+
     it("widget changes data after render function", function () {
       var w = widget.create(null, function () {
-        this.data({ name: "banana", color: "yellow" });
         this.complete();
       });
 
       w.render();
       w.data({ name: "banana", color: "yellow" });
       expect(w.data().name).toBe('banana');
-      
+
       w.data({ name: "apple", color: "green" });
       expect(w.data().name).toBe('apple');
     });
-    
+
     it("widget throws an error on rendering twice", function () {
       var w = widget.create(null, function () {
         this.complete();
@@ -953,6 +952,33 @@
 
       w.render();
       expect(w.render).toThrow();
+    });
+
+    it("widget can replace the content of the container with a new element", function () {
+      var w = widget.create(null, function () {
+        this.container($('<p>'));
+        this.complete();
+      });
+
+      w.render();
+      expect(w.container().outerHTML()).toBe("<p></p>");
+    });
+
+    it("customData is always accessible", function () {
+      var dataChangeCustomDataObject;
+
+      var onDataChange = function () {
+        dataChangeCustomDataObject = this.customData();
+      };
+
+      var w = widget.create({ onDataChange: onDataChange }, function () {
+        this.customData({ a: "a" });
+        this.complete();
+      });
+
+      w.render();
+      w.data({});
+      expect(dataChangeCustomDataObject).toEqual({ a: "a" });
     });
   });
 });

@@ -7,17 +7,17 @@ How to define a widget:
 ``` javascript
 var onSetData = function(eventData){
   // eventData.newData contains the new data set by widget.data(...)
-  this.customData.sliderValue = eventData.newData;
+  this.customData().sliderValue = eventData.newData;
 
   // act only if the widget was rendered
   if (eventData.isRendered) {
-    this.customData.slider('value', eventData.newData);
+    this.customData().slider('value', eventData.newData);
   }
 };
 
 var getWidgetData = function(){
   // override the widget.data() method
-  return this.customData.slider.value();
+  return this.customData().slider.value();
 };
 
 var sliderWidgetOptions = {
@@ -26,8 +26,8 @@ var sliderWidgetOptions = {
 
 sliderWidget = widget.create(sliderWidgetOptions, function() {
   // create the slider object and store it into the customData object of the widget
-  this.customData.slider = this.container.slider({
-    min:1, max:5, value:this.customData.sliderValue
+  this.customData().slider = this.container().slider({
+    min: 1, max: 5, value :this.customData().sliderValue
   });
 
   // signal that the rendering of the widget is completed
@@ -49,7 +49,7 @@ How to use this widget:
 var target = $('<div>');
 
 // sliderWidget.container is a jQuery object
-target.append(sliderWidget.container);
+target.append(sliderWidget.container());
 ```
 
 How to retrieve the slider value?
