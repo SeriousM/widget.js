@@ -6,19 +6,42 @@ How to define a widget:
 
 ``` javascript
 var onSetData = function(eventData){
+  // eventData.newData contains the new data set by widget.data(...)
+  this.customData.sliderValue = eventData.newData;
+
+  // act only if the widget was rendered
   if (eventData.isRendered) {
     this.customData.slider('value', eventData.newData);
   }
 };
 
-sliderWidget = $.widget.create({name:"slider", onDataChange: onSetData}, function() {
-  this.widget.getSliderValue = function() {
-    this.customData.slider.value();
-  };
+var getWidgetData = function(){
+  // override the widget.data() method
+  return this.customData.slider.value();
+};
 
-  this.customData.slider = this.container.slider({min:1, max:5, value:3});
+var sliderWidgetOptions = {
+  name:"slider", onDataChange: onSetData, getData: getWidgetData
+};
+
+sliderWidget = widget.create(sliderWidgetOptions, function() {
+  // create the slider object and store it into the customData object of the widget
+  this.customData.slider = this.container.slider({
+    min:1, max:5, value:this.customData.sliderValue
+  });
+
+  // signal that the rendering of the widget is completed
   this.complete();
 });
+```
+
+How to render this sliderWidget:
+``` javascript
+// set the initial data of the widget.
+// can be done before or after render().
+sliderWidget.data(3);
+
+sliderWidget.render();
 ```
 
 How to use this widget:
@@ -29,25 +52,15 @@ var target = $('<div>');
 target.append(sliderWidget.container);
 ```
 
-How to render this sliderWidget:
-``` javascript
-sliderWidget.render();
-```
-
-How to set data of the sliderWidget:
-``` javascript
-// can be done before or after render().
-sliderWidget.data(4);
-```
-
 How to retrieve the slider value?
 ``` javascript
-var value = sliderWidget.getSliderValue();
+// this will call the defined getWidgetData function.
+var value = sliderWidget.data();
 ```
 
 ## QnA
 Q: I have an existing tom tree and want to use a note as the container for the widget, is that possible?  
-A: Yes, use `$.widget.create(container, options, renderFun)` method.
+A: Yes, use `widget.create(container, options, renderFun)` method.
 
 Q: There are any tests for that?  
 A: Check out the [jasmine tests](test/jasmine.html)

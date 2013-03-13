@@ -3,11 +3,11 @@ widgets = {};
 
 var widget = (function () {
 
-  var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun, defaults, widgetThat,
+  var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun, removePropsFun, defaults, widgetThat,
     // constants
-      TIMEOUT = 3000,
-      ERROR_CONTENT = "An error occured",
-      TIMEOUT_CONTENT = "Timeout",
+    TIMEOUT = 3000,
+    ERROR_CONTENT = "An error occured",
+    TIMEOUT_CONTENT = "Timeout",
     WIDGET_NAME = "noname",
     CONTAINER_ELEMENT = '<div>';
 
@@ -35,6 +35,19 @@ var widget = (function () {
     }
   };
 
+  removePropsFun = function (dataObject) {
+    var keys = Object.keys(dataObject);
+    var $dataObject = $(dataObject);
+    
+    for (var i = 0; i < keys.length; i += 1) {
+      try {
+        $dataObject.removeProp(keys[i]);
+      } catch (e) {
+        throw e;
+      }
+    }
+  };
+
   // public
   createFun = function (container, options, producerFunction) {
     /// <summary>
@@ -48,14 +61,15 @@ var widget = (function () {
     /// A JSON object with options
     ///   'name' ... A unique identfier for this widget. This name is used to identify the widget's content in the done callback of the combine() method.
     ///   'onDataChange' ... a callback on data(obj) was called
+    ///   'getData' ... the function to use when widget().data() is called
     /// </param>
     /// <param name="producerFunction">
     /// A producedFunction that will actually create the html of this widget.
     /// </param>
     var renderDoneDeferred = $.Deferred(),
-        data = null,
-        isRendered = false,
-        widgetTimeout = null;
+      data = {},
+      isRendered = false,
+      widgetTimeout = null;
 
     // make the container optional
     if (!(container instanceof jQuery)) {
@@ -67,9 +81,9 @@ var widget = (function () {
     options = $.extend({ name: defaults.WIDGET_NAME, timeout: defaults.TIMEOUT }, options);
 
     var localContainer = container, localOptions = options, name = localOptions.name,
-        failFun, completeFun, renderFun, dataFun, setOptionsFun,
-        publicThat, renderThat, dataThat, renderDoneThat,
-        customData = {};
+      failFun, completeFun, renderFun, dataFun, setOptionsFun, setDataFun, safeDataFun,
+      publicThat, renderThat, dataChangeThat, renderDoneThat, getDataThat,
+      customData = {};
 
     // method definition
     failFun = function (message) {
@@ -116,15 +130,25 @@ var widget = (function () {
       return promise;
     };
 
+    setDataFun = function(datObject) {
+      removePropsFun(data);
+      $.extend(data, datObject);
+    };
+
     dataFun = function () {
       /// <summary>
       /// function 1: get data by calling #data()
       /// function 2: set data by calling #data(object)
       /// while setting the data, the callback onDataChange from the options will be invoked.
       /// </summary>
+
       // if there was no argument return the current data
       if (arguments.length === 0) {
-        return data;
+        if (localOptions.getData && typeof (localOptions.getData) === "function") {
+          return localOptions.getData.apply(getDataThat);
+        } else {
+          return data;
+        }
       }
 
       var obj = arguments[0];
@@ -137,14 +161,18 @@ var widget = (function () {
       };
 
       // set the data
-      data = obj;
+      setDataFun(obj);
 
       if (localOptions.onDataChange && typeof (localOptions.onDataChange) === "function") {
-        localOptions.onDataChange.apply(dataThat, [dataChangeObject]);
+        localOptions.onDataChange.apply(dataChangeThat, [dataChangeObject]);
       }
 
       // return this to enable chainging
       return this;
+    };
+
+    safeDataFun = function () {
+      return data;
     };
 
     setOptionsFun = function (newOptions) {
@@ -154,39 +182,48 @@ var widget = (function () {
       localOptions = $.extend(localOptions, newOptions);
     };
 
+    // for callback of options.getData
+    getDataThat = {
+      customData: customData,
+      data: data,
+      container: container,
+      name: name
+    };
+
+    // for the render.done promise
     renderDoneThat = {
       container: localContainer,
       name: name,
-      data: dataFun,
-      customData: customData,
-      setOptions: setOptionsFun
+      data: dataFun
     };
 
+    // the return object of create
     publicThat = {
       render: renderFun,
       container: localContainer,
       name: name,
       data: dataFun,
-      customData: customData,
       setOptions: setOptionsFun
     };
 
-    dataThat = {
+    // for callback of onDataChange
+    dataChangeThat = {
       container: localContainer,
       name: name,
-      data: dataFun,
       customData: customData
     };
 
+    // for producerFunction callback
     renderThat = {
       container: localContainer,
       name: name,
-      data: dataFun,
       fail: failFun,
       complete: completeFun,
       options: localOptions,
       customData: customData,
-      widget: publicThat
+      //data: data,
+      //setData: setDataFun,
+      data: safeDataFun
     };
 
     return publicThat;
@@ -194,9 +231,9 @@ var widget = (function () {
 
   combineFun = function (widgets) {
     var widgetDeferreds = [],
-        combinedResult = {},
-        combinePromise,
-        ownDeferred = $.Deferred();
+      combinedResult = {},
+      combinePromise,
+      ownDeferred = $.Deferred();
 
     if (!widgets || widgets.length === 0) {
       return false;
@@ -264,7 +301,3 @@ var widget = (function () {
 
   return widgetThat;
 }());
-
-(function($) {
-  $.widget = widget;
-}(jQuery));

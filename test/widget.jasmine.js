@@ -603,28 +603,30 @@
       expect($container.find("#child").first().text()).toBe("second sentence");
     });
 
-    it("slider test", function () {
+    it("slider test with generic getData function", function () {
       var outerOptions, outerWidget;
 
       var outerWidgetDataChange = function (eventData) {
+        this.customData.sliderValues = eventData.newData;
+
         if (eventData.isRendered) {
           this.customData.sliderNewIdea.data(eventData.newData.newIdeaValue);
           this.customData.sliderNewComment.data(eventData.newData.newCommentValue);
         }
       };
 
-      outerOptions = { name: 'outer', onDataChange: outerWidgetDataChange };
+      var getDataFunction = function() {
+        return {
+          newIdeaValue: this.customData.sliderNewIdea.data(),
+          newCommentValue: this.customData.sliderNewComment.data()
+        };
+      };
+
+      outerOptions = { name: 'outer', onDataChange: outerWidgetDataChange, getData: getDataFunction };
 
       outerWidget = widget.create(outerOptions, function () {
 
-        this.widget.getSliderValues = function () {
-          return {
-            newIdeaValue: this.customData.sliderNewIdea.customData.sliderValue,
-            newCommentValue: this.customData.sliderNewComment.customData.sliderValue
-          };
-        };
-
-        var getSlider = function (name) {
+        var getSliderWidget = function (name) {
           var sliderDataChange = function (eventData) {
             this.customData.sliderValue = eventData.newData;
 
@@ -632,7 +634,12 @@
               this.customData.sliderObject.slider('value', this.customData.sliderValue);
             }
           };
-          var sliderOptions = { name: name, onDataChange: sliderDataChange };
+
+          var sliderGetData = function() {
+            return this.customData.sliderValue;
+          };
+
+          var sliderOptions = { name: name, onDataChange: sliderDataChange, getData: sliderGetData };
 
           var sliderWidget = widget.create(sliderOptions, function () {
             this.customData.sliderObject = this.container;
@@ -652,29 +659,36 @@
           return sliderWidget;
         };
 
-        this.customData.sliderNewIdea = getSlider('sliderNewIdea');
-        this.customData.sliderNewComment = getSlider('sliderNewComment');
+        this.customData.sliderNewIdea = getSliderWidget('sliderNewIdea');
+        this.customData.sliderNewComment = getSliderWidget('sliderNewComment');
 
-        this.customData.sliderNewIdea.data(this.data().newIdeaValue).render();
-        this.customData.sliderNewComment.data(this.data().newCommentValue).render();
+        this.customData.sliderNewIdea.data(this.customData.sliderValues.newIdeaValue);
+        this.customData.sliderNewComment.data(this.customData.sliderValues.newCommentValue);
 
-        var sliderList = this.container;
-        sliderList.append(this.customData.sliderNewIdea.container);
-        sliderList.append(this.customData.sliderNewComment.container);
-
-        this.complete();
+        widget.appendTo(this.container, [this.customData.sliderNewIdea, this.customData.sliderNewComment]).done(this.complete);
       });
 
       outerWidget.data({ newIdeaValue: 1, newCommentValue: 3 });
       outerWidget.render();
 
-      expect(outerWidget.getSliderValues().newIdeaValue).toBe(1);
-      expect(outerWidget.getSliderValues().newCommentValue).toBe(3);
+      expect(outerWidget.data().newIdeaValue).toBe(1);
+      expect(outerWidget.data().newCommentValue).toBe(3);
 
       outerWidget.data({ newIdeaValue: 0, newCommentValue: 0 });
 
-      expect(outerWidget.getSliderValues().newIdeaValue).toBe(0);
-      expect(outerWidget.getSliderValues().newCommentValue).toBe(0);
+      expect(outerWidget.data().newIdeaValue).toBe(0);
+      expect(outerWidget.data().newCommentValue).toBe(0);
+    });
+
+    it("can be chained", function () {
+      var targetContainer = $("<div>");
+      widget.create(targetContainer, null, function () {
+        this.complete();
+      }).render().done(function (w) {
+        w.container.css("color", "red");
+      });
+
+      expect(targetContainer.css("color")).toBe("red");
     });
   });
 
@@ -704,7 +718,7 @@
 
       outData = w.data();
 
-      expect(outData).toBe(inData);
+      expect(outData).toMatch(inData);
       expect(outData.some).toBe(inData.some);
     });
 
@@ -725,7 +739,6 @@
 
       outData = w.data();
 
-      expect(outData).toBe(inData);
       expect(outData.some).toBe(inData.some);
     });
 
@@ -771,7 +784,7 @@
 
       outData = w.data();
 
-      expect(outData).toBe(inData);
+      expect(outData).toMatch(inData);
       expect(outData.some).toBe("!two?");
     });
 
@@ -809,13 +822,13 @@
       var onDataChange = function (eventData) {
         if (callbackCalledCount == 0) {
           expect(eventData.isRendered).toBe(false);
-          expect(eventData.oldData).toBe(null);
+          expect(eventData.oldData).toMatch({});
           expect(eventData.newData).toBe(inData1);
         }
         else if (callbackCalledCount == 1) {
           expect(eventData.isRendered).toBe(false);
           expect(eventData.oldData).not.toBe(eventData.newData);
-          expect(eventData.oldData).toBe(inData1);
+          expect(eventData.oldData).toMatch(inData1);
           expect(eventData.newData).toBe(inData2);
         }
 
@@ -880,24 +893,6 @@
     });
   });
 
-  describe("jquery plugin", function() {
-    it("is accessable via jQuery", function() {
-      expect($.widget).not.toBeNull();
-      expect($.widget.create).not.toBeNull();
-    });
-    
-    it("can be chained", function () {
-      var targetContainer = $("<div>");
-      $.widget.create(targetContainer, null, function() {
-         this.complete();
-      }).render().done(function(w) {
-         w.container.css("color", "red");
-      });
-
-      expect(targetContainer.css("color")).toBe("red");
-    });
-  });
-
   describe("documentation", function() {
     it("minimal widget setting with null container", function() {
       var w = widget.create($('<div>'), null, function () {
@@ -939,11 +934,11 @@
     
     it("widget changes data in render function", function () {
       var w = widget.create(null, function () {
-        this.data({ name: "banana", color: "yellow" });
         this.complete();
       });
 
       w.render();
+      w.data({ name: "banana", color: "yellow" });
       expect(w.data().name).toBe('banana');
       
       w.data({ name: "apple", color: "green" });
