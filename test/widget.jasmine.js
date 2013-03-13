@@ -932,8 +932,9 @@
       expect(w.data().name).toBe('banana');
     });
     
-    it("widget changes data in render function", function () {
+    it("widget changes data after render function", function () {
       var w = widget.create(null, function () {
+        this.data({ name: "banana", color: "yellow" });
         this.complete();
       });
 
@@ -943,6 +944,15 @@
       
       w.data({ name: "apple", color: "green" });
       expect(w.data().name).toBe('apple');
+    });
+    
+    it("widget throws an error on rendering twice", function () {
+      var w = widget.create(null, function () {
+        this.complete();
+      });
+
+      w.render();
+      expect(w.render).toThrow();
     });
   });
 });

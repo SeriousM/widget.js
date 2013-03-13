@@ -5,7 +5,7 @@ var widget = (function () {
 
   var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun, removePropsFun, defaults, widgetThat,
     // constants
-    TIMEOUT = 3000,
+    TIMEOUT = 5000,
     ERROR_CONTENT = "An error occured",
     TIMEOUT_CONTENT = "Timeout",
     WIDGET_NAME = "noname",
@@ -81,7 +81,7 @@ var widget = (function () {
     options = $.extend({ name: defaults.WIDGET_NAME, timeout: defaults.TIMEOUT }, options);
 
     var localContainer = container, localOptions = options, name = localOptions.name,
-      failFun, completeFun, renderFun, dataFun, setOptionsFun, setDataFun, safeDataFun,
+      failFun, completeFun, renderFun, dataFun, setOptionsFun, setDataFun, readDataFun,
       publicThat, renderThat, dataChangeThat, renderDoneThat, getDataThat,
       customData = {};
 
@@ -100,6 +100,10 @@ var widget = (function () {
       /// <summary>
       /// Execute the producer function that creates the html for this widget.
       /// </summary>
+      if (isRendered) {
+        throw new Error("The widget was already rendered.");
+      }
+
       var selfArgs = Array.prototype.slice.call(arguments, 0);
 
       // fail with an error if the widget is too slow to respond in time.
@@ -171,7 +175,10 @@ var widget = (function () {
       return this;
     };
 
-    safeDataFun = function () {
+    readDataFun = function () {
+      if (arguments.length > 0) {
+        throw Error("You are now allowed to set data in the widget.render function.");
+      }
       return data;
     };
 
@@ -180,6 +187,15 @@ var widget = (function () {
       /// extens the existing options with the new provided options.
       /// </summary>
       localOptions = $.extend(localOptions, newOptions);
+    };
+
+    // the return object of create
+    publicThat = {
+      render: renderFun,
+      container: localContainer,
+      name: name,
+      data: dataFun,
+      setOptions: setOptionsFun
     };
 
     // for callback of options.getData
@@ -197,15 +213,6 @@ var widget = (function () {
       data: dataFun
     };
 
-    // the return object of create
-    publicThat = {
-      render: renderFun,
-      container: localContainer,
-      name: name,
-      data: dataFun,
-      setOptions: setOptionsFun
-    };
-
     // for callback of onDataChange
     dataChangeThat = {
       container: localContainer,
@@ -221,7 +228,7 @@ var widget = (function () {
       complete: completeFun,
       options: localOptions,
       customData: customData,
-      data: safeDataFun
+      data: readDataFun
     };
 
     return publicThat;
@@ -238,7 +245,7 @@ var widget = (function () {
     }
 
     var getProcessWidgetPromise = function (widget) {
-      widget.setOptions({ timeout: 2900 });
+      widget.setOptions({ timeout: defaults.TIMEOUT - 100 });
       var promise = widget.render();
 
       // render the widget and resolve as successful
