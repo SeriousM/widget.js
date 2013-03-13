@@ -63,7 +63,7 @@ Q: I have an existing tom tree and want to use a note as the container for the w
 A: Yes, use `widget.create(container, options, renderFun)` method.
 
 Q: There are any tests for that?  
-A: Check out the [jasmine tests](test/jasmine.html)
+A: Check out the [jasmine tests](test/jasmine.html) or [run them here](http://seriousm.github.com/widget.js/)
 
 Q: Who had the idea?  
 A: [linudaar](https://github.com/linudaar) was the guy behind this widget, [I](https://github.com/SeriousM) rebuild it completely.
