@@ -256,7 +256,8 @@
 			combinedResult.list = [];
 
 			if (!widgets || widgets.length === 0) {
-				return false;
+				ownDeferred.resolve({list:[]});
+				return ownDeferred.promise();
 			}
 
 			var getProcessWidgetPromise = function (widget) {
