@@ -28,7 +28,7 @@
 					}
 					throw e;
 				}
-				
+
 			});
 		};
 
@@ -178,11 +178,11 @@
 				}
 
 				// set the data
-				if (internalStore.container.parent().length === 0) {
-					internalStore.container = content;
-				} else {
+				if (internalStore.container.parent().length !== 0) {
 					internalStore.container.replaceWith(content);
 				}
+
+				internalStore.container = content;
 
 				// return this to enable chainging
 				return this;
@@ -256,7 +256,7 @@
 			combinedResult.list = [];
 
 			if (!widgets || widgets.length === 0) {
-				ownDeferred.resolve({list:[]});
+				ownDeferred.resolve({ list: [] });
 				return ownDeferred.promise();
 			}
 
