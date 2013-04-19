@@ -3,7 +3,7 @@
 		var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun,
 		    defaults, widgetThat,
 		    // constants
-		    TIMEOUT = 5000,
+		    TIMEOUT = 60000,
 		    ERROR_CONTENT = "An error occured",
 		    TIMEOUT_CONTENT = "Timeout",
 		    WIDGET_NAME = "noname",
@@ -33,12 +33,12 @@
 		};
 
 		// public
-		createFun = function (container, options, producerFunction) {
+		createFun = function (container, options, renderFunction) {
 			/// <summary>
 			/// Creates a new widget.
 			/// </summary>
 			/// <param name="container">
-			/// A DOM element, where the html (produced by the producerFunction) will be inserted into.
+			/// A DOM element, where the html (produced by the renderFunction) will be inserted into.
 			/// If omitted a container is still created and can be accessed by calling widget.container.
 			/// </param>
 			/// <param name="options">
@@ -47,13 +47,13 @@
 			///   'onDataChange' ... a callback on data(obj) was called
 			///   'getData' ... the function to use when widget().data() is called
 			/// </param>
-			/// <param name="producerFunction">
-			/// A producedFunction that will actually create the html of this widget.
+			/// <param name="renderFunction">
+			/// A renderFunction that will actually create the html of this widget.
 			/// </param>
 
 			// make the container optional
 			if (!(container instanceof jQuery)) {
-				producerFunction = options;
+				renderFunction = options;
 				options = container;
 				container = $(defaults.CONTAINER_ELEMENT);
 			}
@@ -80,7 +80,7 @@
 
 			renderFun = function () {
 				/// <summary>
-				/// Execute the producer function that creates the html for this widget.
+				/// Execute the render function that creates the html for this widget.
 				/// </summary>
 				if (isRendered) {
 					throw new Error("The widget was already rendered.");
@@ -93,22 +93,22 @@
 					failFun(defaults.TIMEOUT_CONTENT);
 				}, internalStore.options.timeout);
 
-				// Execute the producer function
-				// Note: The producer function may produce its html synchronously or asynchronously!
-				if (typeof producerFunction === 'function') {
+				// Execute the render function
+				// Note: The render function may render its html synchronously or asynchronously!
+				if (typeof renderFunction === 'function') {
 					try {
-						producerFunction.apply(renderThat, selfArgs);
+						renderFunction.apply(renderThat, selfArgs);
 
 						// indicate that rendered was called
 						isRendered = true;
 					} catch (e) {
-						// In case the producer function caused an error, we stil emit a result 'ERROR' instead
+						// In case the render function caused an error, we stil emit a result 'ERROR' instead
 						// of the correct result.
 						console.error("Error on render: " + (e.message || "no message found"), e);
 						failFun(defaults.ERROR_CONTENT);
 					}
 				} else {
-					throw new Error("producerFunction is not a function!");
+					throw new Error("renderFunction is not a function!");
 				}
 
 				var promise = renderDoneDeferred.promise();
@@ -233,7 +233,7 @@
 				customData: customDataFun
 			};
 
-			// for producerFunction callback
+			// for renderFunction callback
 			renderThat = {
 				container: containerFun,
 				name: internalStore.options.name,

@@ -1,4 +1,9 @@
 ﻿describe("Widget Tests", function () {
+
+  beforeEach(function(){
+    widget.defaults.TIMEOUT = 300;
+  });
+
   describe("Html Render Test", function () {
 
     it("can produce result synchronously", function () {
