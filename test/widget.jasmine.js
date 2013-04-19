@@ -695,6 +695,21 @@
 
       expect(targetContainer.css("color")).toBe("red");
     });
+
+    it("on render.done the parameter is the same widget", function () {
+      var targetContainer = $("<div>");
+      var w1, w2;
+
+      w1 = widget.create(targetContainer, null, function () {
+        this.complete();
+      });
+
+      w1.render().done(function (w) {
+        w2 = w;
+      });
+
+      expect(w1).toBe(w2);
+    });
   });
 
   describe("Data Test", function () {
