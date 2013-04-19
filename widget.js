@@ -64,7 +64,7 @@
 			    isRendered = false,
 			    widgetTimeout = null,
 			    failFun, completeFun, renderFun, dataFun, setOptionsFun, readDataFun, customDataFun, containerFun,
-			    publicThat, renderThat, dataChangeThat, renderDoneThat, getDataThat,
+			    createThat, renderThat, dataChangeThat, getDataThat,
 			    internalStore = { data: null, customData: {}, container: container, options: options };
 
 			// method definition
@@ -75,7 +75,7 @@
 
 			completeFun = function () {
 				clearTimeout(widgetTimeout);
-				renderDoneDeferred.resolve(renderDoneThat);
+				renderDoneDeferred.resolve(createThat);
 			};
 
 			renderFun = function () {
@@ -203,7 +203,7 @@
 			};
 
 			// the return object of create
-			publicThat = {
+			createThat = {
 				render: renderFun,
 				container: containerFun,
 				name: internalStore.options.name,
@@ -217,13 +217,6 @@
 				data: readDataFun,
 				container: containerFun,
 				name: internalStore.options.name
-			};
-
-			// for the render.done promise
-			renderDoneThat = {
-				container: containerFun,
-				name: internalStore.options.name,
-				data: dataFun
 			};
 
 			// for callback of onDataChange
@@ -244,7 +237,7 @@
 				data: readDataFun
 			};
 
-			return publicThat;
+			return createThat;
 		};
 
 		combineFun = function (widgets) {
