@@ -2,6 +2,7 @@
 
   beforeEach(function(){
     widget.defaults.TIMEOUT = 300;
+    widget.resetEvents();
   });
 
   describe("Html Render Test", function () {
@@ -556,6 +557,108 @@
         expect($combinedContainer.html()).toBe(innerHtml);
       });
     });
+
+    it("combine returns the rendered containers as well as the widgets", function () {
+      var w1 = widget.create({}, function(){
+        this.complete();
+      });
+      var w2 = widget.create({}, function(){
+        this.complete();
+      });
+
+      widget.combine([w1, w2]).done(function(combinedResult){
+        expect(combinedResult.widgetList).not.toBeUndefined();
+        expect(combinedResult.widgetList.length).toEqual(2);
+      });
+    });
+
+    it("calls the afterRender function", function () {
+      var callbackCalledCount = 0;
+      var w = widget.create({}, function(){
+        this.complete();
+      });
+
+      widget.addEvent("afterRender", function(){
+        callbackCalledCount++;
+        console.log("!!!!!!!!!!!!!!!!!! SHOULD BE CALLED JUST ONCE !!!!!!!!!!!!!!!!!!");
+      });
+
+      waitsFor(function () {
+        return callbackCalledCount == 1;
+      });
+
+      runs(function () {
+        expect(callbackCalledCount).toBe(1);
+      });
+
+      w.render();
+    });
+
+    it("don't calls the afterRender function if removed", function () {
+      var callbackCalledCount = 0;
+      var wrongCallbackCalledCount = 0;
+      var w = widget.create({}, function(){
+        this.complete();
+      });
+
+      var wrongCallback = function(){
+        wrongCallbackCalledCount++;
+      };
+
+      var callback = function(){
+        setTimeout(function(){
+          callbackCalledCount++;
+        }, 100);
+      };
+
+      widget.addEvent("afterRender", callback);
+      widget.addEvent("afterRender", wrongCallback);
+      widget.removeEvent("afterRender", wrongCallback);
+
+      waitsFor(function () {
+        return callbackCalledCount == 1;
+      });
+
+      runs(function () {
+        expect(callbackCalledCount).toBe(1);
+        expect(wrongCallbackCalledCount).toBe(0);
+      });
+
+      w.render();
+    });
+
+    it("calls onConfigChange if #config(obj) is called", function () {
+      var callbackCalledCount = 0;
+
+      var onConfigChange = function(){
+        callbackCalledCount++;
+      };
+
+      var w = widget.create({onConfigChange: onConfigChange}, function(){
+        this.complete();
+      });
+
+      waitsFor(function () {
+        return callbackCalledCount == 1;
+      });
+
+      runs(function () {
+        expect(callbackCalledCount).toBe(1);
+      });
+
+      w.config({});
+    });
+
+    it("returns the same config object after set", function () {
+      var w = widget.create({}, function(){
+        this.complete();
+      });
+
+      var testConfig = {test: 1};
+      w.config(testConfig);
+
+      expect(w.config()).toEqual(testConfig);
+    });
   });
 
   describe("jQuery Object Render Test", function () {
@@ -608,7 +711,8 @@
       expect($container.find("#child").first().text()).toBe("second sentence");
     });
 
-    it("slider test with generic getData function", function () {
+    xit("slider test with generic getData function", function () {
+      // DISABLED, this requires jquery.ui
       var outerOptions, outerWidget;
 
       var outerWidgetDataChange = function (eventData) {

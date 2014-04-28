@@ -1,320 +1,455 @@
 ﻿(function (window, $) {
-	window.widget = (function () {
-		var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun,
-		    defaults, widgetThat,
-		    // constants
-		    TIMEOUT = 60000,
-		    ERROR_CONTENT = "An error occured",
-		    TIMEOUT_CONTENT = "Timeout",
-		    WIDGET_NAME = "noname",
-		    CONTAINER_ELEMENT = '<div>';
+  window.widget = (function () {
+    var createFun, combineFun, appendToFun, replaceInFun, appendElementsFun, 
+        prependToFun, addEventFun, removeEventFun, defaults, widgetThat, events, 
+        eventKeys, removeFromArrayFun, resetEventsFun,
+        // constants
+        TIMEOUT = 5000,
+        ERROR_CONTENT = "An error occured",
+        TIMEOUT_CONTENT = "Timeout",
+        WIDGET_NAME = "noname",
+        CONTAINER_ELEMENT = '<div>';
 
-		defaults = {
-			TIMEOUT: TIMEOUT,
-			ERROR_CONTENT: ERROR_CONTENT,
-			TIMEOUT_CONTENT: TIMEOUT_CONTENT,
-			WIDGET_NAME: WIDGET_NAME,
-			CONTAINER_ELEMENT: CONTAINER_ELEMENT
-		};
+    defaults = {
+      TIMEOUT: TIMEOUT,
+      ERROR_CONTENT: ERROR_CONTENT,
+      TIMEOUT_CONTENT: TIMEOUT_CONTENT,
+      WIDGET_NAME: WIDGET_NAME,
+      CONTAINER_ELEMENT: CONTAINER_ELEMENT
+    };
 
-		// private
-		appendElementsFun = function (targetContainer, result) {
-			$.each(result.list, function (index, item) {
-				try {
-					targetContainer.append(item);
-				} catch (e) {
-					if (e && e.name && e.name == "HierarchyRequestError") {
-						console.error("This element is already bound to an DOM element. Please fix this binding.", item);
-					}
-					throw e;
-				}
+    eventKeys = {
+      afterRender: "afterRender"
+    };
 
-			});
-		};
+    resetEventsFun = function(){
+      events = {};
+      _.each(_.keys(eventKeys), function(eventKey) {
+        events[eventKey] = [];
+      });
+    };
 
-		// public
-		createFun = function (container, options, renderFunction) {
-			/// <summary>
-			/// Creates a new widget.
-			/// </summary>
-			/// <param name="container">
-			/// A DOM element, where the html (produced by the renderFunction) will be inserted into.
-			/// If omitted a container is still created and can be accessed by calling widget.container.
-			/// </param>
-			/// <param name="options">
-			/// A JSON object with options
-			///   'name' ... A unique identfier for this widget. This name is used to identify the widget's content in the done callback of the combine() method.
-			///   'onDataChange' ... a callback on data(obj) was called
-			///   'getData' ... the function to use when widget().data() is called
-			/// </param>
-			/// <param name="renderFunction">
-			/// A renderFunction that will actually create the html of this widget.
-			/// </param>
+    resetEventsFun();
+    
+    // private
+    appendElementsFun = function (targetContainer, result, action) {
+      $.each(result.list, function (index, item) {
+        try {
+          action(targetContainer, item);
+        } catch (e) {
+          if (e && e.name && e.name == "HierarchyRequestError") {
+            console.error("This element is already bound to an DOM element. Please fix this binding.", item);
+          }
+          throw e;
+        }
+      });
+    };
 
-			// make the container optional
-			if (!(container instanceof jQuery)) {
-				renderFunction = options;
-				options = container;
-				container = $(defaults.CONTAINER_ELEMENT);
-			}
+    removeFromArrayFun = function (arr, item) {
+      for (var i = arr.length; i--;) {
+        if (arr[i] === item) {
+          arr.splice(i, 1);
+        }
+      }
+    };
 
-			options = $.extend({ name: defaults.WIDGET_NAME, timeout: defaults.TIMEOUT }, options);
+    // public
+    addEventFun = function(name, func) {
+      var eventContainer = events[name];
+      if (!eventContainer || !_.isFunction(func)) {
+        return;
+      }
 
-			var renderDoneDeferred = $.Deferred(),
-			    isRendered = false,
-			    widgetTimeout = null,
-			    failFun, completeFun, renderFun, dataFun, setOptionsFun, readDataFun, customDataFun, containerFun,
-			    createThat, renderThat, dataChangeThat, getDataThat,
-			    internalStore = { data: null, customData: {}, container: container, options: options };
+      eventContainer.push(func);
+    };
 
-			// method definition
-			failFun = function (message) {
-				internalStore.container.html(message);
-				completeFun();
-			};
+    removeEventFun = function(name, func) {
+      var eventContainer = events[name];
+      if (!eventContainer || !_.isFunction(func)) {
+        return;
+      }
 
-			completeFun = function () {
-				clearTimeout(widgetTimeout);
-				renderDoneDeferred.resolve(createThat);
-			};
+      removeFromArrayFun(eventContainer, func);
+    };
 
-			renderFun = function () {
-				/// <summary>
-				/// Execute the render function that creates the html for this widget.
-				/// </summary>
-				if (isRendered) {
-					throw new Error("The widget was already rendered.");
-				}
+    createFun = function (container, options, renderFunction) {
+      /// <summary>
+      /// Creates a new widget.
+      /// </summary>
+      /// <param name="container">
+      /// A DOM element, where the html (produced by the renderFunction) will be inserted into.
+      /// If omitted a container is still created and can be accessed by calling widget.container.
+      /// </param>
+      /// <param name="options">
+      /// A JSON object with options
+      ///   'name' ... A unique identfier for this widget. This name is used to identify the widget's content in the done callback of the combine() method.            
+      ///   'onDataChange' ... a callback on data(obj) was called
+      ///   'onConfigChange' ... a callback on config(obj) was called
+      ///   'getData' ... the function to use when widget().data() is called
+      /// </param>
+      /// <param name="renderFunction">
+      /// A renderFunction that will actually create the html of this widget.
+      /// </param>
 
-				var selfArgs = Array.prototype.slice.call(arguments, 0);
+      // make the container optional
+      if (!(container instanceof jQuery)) {
+        renderFunction = options;
+        options = container;
+        container = $(defaults.CONTAINER_ELEMENT);
+      }
 
-				// fail with an error if the widget is too slow to respond in time.
-				widgetTimeout = setTimeout(function () {
-					failFun(defaults.TIMEOUT_CONTENT);
-				}, internalStore.options.timeout);
+      options = $.extend({ name: defaults.WIDGET_NAME, timeout: defaults.TIMEOUT }, options);
 
-				// Execute the render function
-				// Note: The render function may render its html synchronously or asynchronously!
-				if (typeof renderFunction === 'function') {
-					try {
-						renderFunction.apply(renderThat, selfArgs);
+      var renderDoneDeferred = $.Deferred(),
+          isRendered = false,
+          widgetTimeout = null,
+          failFun, completeFun, renderFun, dataFun, configFun, setOptionsFun, readDataFun, readConfigFun, customDataFun, containerFun,
+          createThat, renderThat, dataChangeThat, configChangeThat, getDataThat,
+          internalStore = { data: null, customData: {}, container: container, options: options };
 
-						// indicate that rendered was called
-						isRendered = true;
-					} catch (e) {
-						// In case the render function caused an error, we stil emit a result 'ERROR' instead
-						// of the correct result.
-						console.error("Error on render: " + (e.message || "no message found"), e);
-						failFun(defaults.ERROR_CONTENT);
-					}
-				} else {
-					throw new Error("renderFunction is not a function!");
-				}
+      // method definition
+      failFun = function (message) {
+        internalStore.container.html(message);
+        console.log(message, container, options, renderFunction);
+        completeFun();
+      };
 
-				var promise = renderDoneDeferred.promise();
+      completeFun = function () {
+        clearTimeout(widgetTimeout);
+        renderDoneDeferred.resolve(createThat);
+      };
 
-				return promise;
-			};
+      renderFun = function () {
+        /// <summary>
+        /// Execute the render function that creates the html for this widget.
+        /// </summary>
+        if (isRendered) {
+          throw new Error("The widget was already rendered.");
+        }
 
-			dataFun = function () {
-				/// <summary>
-				/// function 1: get data by calling #data()
-				/// function 2: set data by calling #data(object)
-				/// while setting the data, the callback onDataChange from the options will be invoked.
-				/// </summary>
+        var selfArgs = Array.prototype.slice.call(arguments, 0);
 
-				// if there was no argument return the current data
-				if (arguments.length === 0) {
-					if (internalStore.options.getData && typeof (internalStore.options.getData) === "function") {
-						return internalStore.options.getData.apply(getDataThat);
-					} else {
-						return internalStore.data;
-					}
-				}
+        // fail with an error if the widget is too slow to respond in time.
+        widgetTimeout = setTimeout(function () {
+          failFun(defaults.TIMEOUT_CONTENT);
+        }, internalStore.options.timeout);
 
-				var obj = arguments[0];
+        // Execute the render function
+        // Note: The render function may render its html synchronously or asynchronously!
+        if (typeof renderFunction === 'function') {
+          try {
+            renderFunction.apply(renderThat, selfArgs);
 
-				// asseble a event object
-				var dataChangeObject = {
-					oldData: internalStore.data,
-					newData: obj,
-					isRendered: isRendered
-				};
+            // indicate that rendered was called
+            isRendered = true;
+          } catch (e) {
+            // In case the render function caused an error, we stil emit a result 'ERROR' instead
+            // of the correct result.
+            console.error("Error on render: " + (e.message || "no message found"), e);
+            failFun(defaults.ERROR_CONTENT);
+          }
+        } else {
+          throw new Error("renderFunction is not a function!");
+        }
 
-				// set the data
-				internalStore.data = obj;
+        var promise = renderDoneDeferred.promise();
 
-				if (internalStore.options.onDataChange && typeof (internalStore.options.onDataChange) === "function") {
-					internalStore.options.onDataChange.apply(dataChangeThat, [dataChangeObject]);
-				}
+        _.each(events[eventKeys.afterRender], function (afterRenderFunction) {
+          promise = promise.done(afterRenderFunction);
+        });
 
-				// return this to enable chainging
-				return this;
-			};
+        return promise;
+      };
 
-			customDataFun = function () {
-				if (arguments.length === 0) {
-					return internalStore.customData;
-				}
+      dataFun = function () {
+        /// <summary>
+        /// function 1: get data by calling #data()
+        /// function 2: set data by calling #data(object)
+        /// while setting the data, the callback onDataChange from the options will be invoked.
+        /// </summary>
 
-				var obj = arguments[0];
+        // if there was no argument return the current data
+        if (arguments.length === 0) {
+          if (internalStore.options.getData && typeof (internalStore.options.getData) === "function") {
+            return internalStore.options.getData.apply(getDataThat);
+          } else {
+            return internalStore.data;
+          }
+        }
 
-				// set the data
-				internalStore.customData = obj;
+        var obj = arguments[0];
 
-				// return this to enable chainging
-				return this;
-			};
+        // asseble a event object
+        var dataChangeObject = {
+          oldData: internalStore.data,
+          newData: obj,
+          isRendered: isRendered
+        };
 
-			containerFun = function () {
-				if (arguments.length === 0) {
-					return internalStore.container;
-				}
+        // set the data
+        internalStore.data = obj;
 
-				var content = arguments[0];
+        if (internalStore.options.onDataChange && typeof (internalStore.options.onDataChange) === "function") {
+          internalStore.options.onDataChange.apply(dataChangeThat, [dataChangeObject]);
+        }
 
-				if (!content) {
-					throw Error("The new content of the container may not be empty.");
-				}
+        // return this to enable chainging
+        return this;
+      };
 
-				// set the data
-				if (internalStore.container.parent().length !== 0) {
-					internalStore.container.replaceWith(content);
-				}
+      configFun = function () {
+        /// <summary>
+        /// function 1: get config by calling #config()
+        /// function 2: set config by calling #config(object)
+        /// while setting the config, the callback onConfigChange from the options will be invoked.
+        /// </summary>
 
-				internalStore.container = content;
+        // if there was no argument return the current data
+        if (arguments.length === 0) {
+          return internalStore.config;
+        }
 
-				// return this to enable chainging
-				return this;
-			};
+        var obj = arguments[0];
 
-			readDataFun = function () {
-				if (arguments.length > 0) {
-					throw Error("You are now allowed to set data in the widget.render function.");
-				}
-				return internalStore.data;
-			};
+        // asseble a event object
+        var configChangeObject = {
+          oldConfig: internalStore.config,
+          newConfig: obj,
+          isRendered: isRendered
+        };
 
-			setOptionsFun = function (newOptions) {
-				/// <summary>
-				/// extens the existing options with the new provided options.
-				/// </summary>
-				$.extend(internalStore.options, newOptions);
-			};
+        // set the config
+        internalStore.config = obj;
 
-			// the return object of create
-			createThat = {
-				render: renderFun,
-				container: containerFun,
-				name: internalStore.options.name,
-				data: dataFun,
-				setOptions: setOptionsFun
-			};
+        if (internalStore.options.onConfigChange && typeof (internalStore.options.onConfigChange) === "function") {
+          internalStore.options.onConfigChange.apply(configChangeThat, [configChangeObject]);
+        }
 
-			// for callback of options.getData
-			getDataThat = {
-				customData: customDataFun,
-				data: readDataFun,
-				container: containerFun,
-				name: internalStore.options.name
-			};
+        // return this to enable chainging
+        return this;
+      };
 
-			// for callback of onDataChange
-			dataChangeThat = {
-				container: containerFun,
-				name: internalStore.options.name,
-				customData: customDataFun
-			};
+      customDataFun = function () {
+        if (arguments.length === 0) {
+          return internalStore.customData;
+        }
 
-			// for renderFunction callback
-			renderThat = {
-				container: containerFun,
-				name: internalStore.options.name,
-				fail: failFun,
-				complete: completeFun,
-				options: internalStore.options,
-				customData: customDataFun,
-				data: readDataFun
-			};
+        var obj = arguments[0];
 
-			return createThat;
-		};
+        // set the data
+        internalStore.customData = obj;
 
-		combineFun = function (widgets) {
-			var widgetDeferreds = [],
-			    combinedResult = {},
-			    combinePromise,
-			    ownDeferred = $.Deferred();
+        // return this to enable chainging
+        return this;
+      };
 
-			combinedResult.list = [];
+      containerFun = function () {
+        if (arguments.length === 0) {
+          return internalStore.container;
+        }
 
-			if (!widgets || widgets.length === 0) {
-				ownDeferred.resolve({ list: [] });
-				return ownDeferred.promise();
-			}
+        var content = arguments[0];
 
-			var getProcessWidgetPromise = function (widget) {
-				widget.setOptions({ timeout: defaults.TIMEOUT - 100 });
-				var promise = widget.render();
+        if (!content) {
+          throw Error("The new content of the container may not be empty.");
+        }
 
-				// render the widget and resolve as successful
-				promise.done(function () {
-					var widgetContainer = widget.container();
-					combinedResult[widget.name] = widgetContainer;
-					combinedResult.list.push(widgetContainer);
-				});
+        // set the data
+        if (internalStore.container.parent().length !== 0) {
+          internalStore.container.replaceWith(content);
+        }
 
-				return promise;
-			};
+        internalStore.container = content;
 
-			$.each(widgets, function (index, widget) {
-				var localWidget = widget;
-				widgetDeferreds.push(getProcessWidgetPromise(localWidget));
-			});
+        // return this to enable chainging
+        return this;
+      };
 
-			combinePromise = $.when.apply(this, widgetDeferreds);
-			combinePromise.done(function () {
-				ownDeferred.resolve(combinedResult);
-			});
+      readDataFun = function () {
+        if (arguments.length > 0) {
+          throw Error("You are now allowed to set data in the widget.render function.");
+        }
+        return internalStore.data;
+      };
 
-			return ownDeferred.promise();
-		};
+      readConfigFun = function () {
+        if (arguments.length > 0) {
+          throw Error("You are now allowed to set config in the widget.render function.");
+        }
+        return internalStore.config;
+      };
 
-		appendToFun = function (targetContainer, widgets) {
-			var combinePromise = this.combine(widgets);
+      setOptionsFun = function (newOptions) {
+        /// <summary>
+        /// extens the existing options with the new provided options.
+        /// </summary>
+        $.extend(internalStore.options, newOptions);
+      };
 
-			combinePromise.done(function (result) {
-				appendElementsFun(targetContainer, result);
-			});
+      // the return object of create
+      createThat = {
+        render: renderFun,
+        container: containerFun,
+        name: internalStore.options.name,
+        data: dataFun,
+        config: configFun,
+        setOptions: setOptionsFun
+      };
 
-			return combinePromise;
-		};
+      // for callback of options.getData
+      getDataThat = {
+        customData: customDataFun,
+        data: readDataFun,
+        container: containerFun,
+        name: internalStore.options.name
+      };
 
-		replaceInFun = function (targetContainer, widgets) {
-			var combinePromise = this.combine(widgets);
+      // for callback of onDataChange
+      dataChangeThat = {
+        container: containerFun,
+        name: internalStore.options.name,
+        customData: customDataFun
+      };
 
-			combinePromise.done(function () {
-				targetContainer.html('');
-			});
-			combinePromise.done(function (result) {
-				appendElementsFun(targetContainer, result);
-			});
+      // for callback of onConfigChange
+      dataChangeThat = {
+        container: containerFun,
+        name: internalStore.options.name,
+        customData: customDataFun
+      };
 
-			return combinePromise;
-		};
+      // for renderFunction callback
+      renderThat = {
+        container: containerFun,
+        name: internalStore.options.name,
+        fail: failFun,
+        complete: completeFun,
+        options: internalStore.options,
+        customData: customDataFun,
+        data: readDataFun,
+        config: readConfigFun
+      };
 
-		widgetThat = {
-			defaults: defaults,
+      return createThat;
+    };
 
-			create: createFun,
+    combineFun = function (widgets) {
+      var widgetDeferreds = [],
+          combinedResult = {},
+          combinePromise,
+          ownDeferred = $.Deferred();
 
-			combine: combineFun,
+      combinedResult.list = [];
+      combinedResult.widgets = {};
+      combinedResult.widgetList = [];
+      
+      if (_.isObject(widgets) && !_.isArray(widgets)) {
+        widgets = [widgets];
+      }
 
-			appendTo: appendToFun,
+      if (!widgets || widgets.length === 0) {
+        ownDeferred.resolve({ list: [], widgets: [], widgetList: [] });
+        return ownDeferred.promise();
+      }
 
-			replaceIn: replaceInFun
-		};
+      var getProcessWidgetPromise = function (widget, index) {
+        widget.setOptions({ timeout: defaults.TIMEOUT - 100 });
+        var promise = widget.render();
 
-		return widgetThat;
-	})();
+        // render the widget and resolve as successful
+        promise.done(function () {
+          var widgetContainer = widget.container();
+          combinedResult[widget.name] = widgetContainer; // TODO: Refactor this, check if needed!
+          combinedResult.list[index] = widgetContainer;
+          if (widget.name) {
+              combinedResult.widgets[widget.name] = widget;
+          } else {
+              console.log("widget " + index + " has no name");
+          }
+          combinedResult.widgetList[index] = widget;
+        });
+
+        return promise;
+      };
+
+      $.each(widgets, function (index, widget) {
+        var localWidget = widget;
+        var localIndex = index;
+        widgetDeferreds.push(getProcessWidgetPromise(localWidget, localIndex));
+      });
+
+      combinePromise = $.when.apply(this, widgetDeferreds);
+      combinePromise.done(function () {
+        ownDeferred.resolve(combinedResult);
+      });
+
+      return ownDeferred.promise();
+    };
+
+    var containerAppendFun = function(targetContainer, item) {
+      targetContainer.append(item);
+    };
+    
+    var containerPrependFun = function (targetContainer, item) {
+      targetContainer.prepend(item);
+    };
+
+
+    appendToFun = function (targetContainer, widgets) {
+      var combinePromise = this.combine(widgets);
+
+      combinePromise.done(function (result) {
+        appendElementsFun(targetContainer, result, containerAppendFun);
+      });
+
+      return combinePromise;
+    };
+    
+    prependToFun = function (targetContainer, widgets) {
+      var combinePromise = this.combine(widgets);
+
+      combinePromise.done(function (result) {
+        appendElementsFun(targetContainer, result, containerPrependFun);
+      });
+
+      return combinePromise;
+    };
+
+    replaceInFun = function (targetContainer, widgets) {
+      var combinePromise = this.combine(widgets);
+
+      combinePromise.done(function () {
+        targetContainer.html('');
+      });
+      combinePromise.done(function (result) {
+        appendElementsFun(targetContainer, result, containerAppendFun);
+      });
+
+      return combinePromise;
+    };
+
+    widgetThat = {
+      defaults: defaults,
+
+      eventKeys: eventKeys,
+
+      create: createFun,
+
+      combine: combineFun,
+
+      appendTo: appendToFun,
+      
+      prependTo: prependToFun,
+
+      replaceIn: replaceInFun,
+
+      addEvent: addEventFun,
+
+      removeEvent: removeEventFun,
+
+      resetEvents: resetEventsFun
+    };
+
+    return widgetThat;
+  })();
 })(window, jQuery);
